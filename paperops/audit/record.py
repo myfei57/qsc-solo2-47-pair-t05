@@ -8,7 +8,7 @@ EVENT_KIND = "event"
 
 @dataclass(frozen=True)
 class AuditRecord:
-    """A control event exactly as it was observed."""
+    """A control event exactly as it was observed, sealed into the chain."""
 
     seq: int
     record_id: str
@@ -17,8 +17,11 @@ class AuditRecord:
     generation: int
     batch_id: str
     payload: Any
+    prev_hash: str = ""
+    chain_hash: str = ""
 
-    def to_row(self) -> dict[str, Any]:
+    def content_row(self) -> dict[str, Any]:
+        """The observed fields, without the chain link itself."""
         return {
             "seq": self.seq,
             "record_id": self.record_id,
@@ -28,6 +31,12 @@ class AuditRecord:
             "batch_id": self.batch_id,
             "payload": self.payload,
         }
+
+    def to_row(self) -> dict[str, Any]:
+        row = self.content_row()
+        row["prev_hash"] = self.prev_hash
+        row["chain_hash"] = self.chain_hash
+        return row
 
     def as_filter_row(self) -> dict[str, Any]:
         """Row shape understood by the shared record filter."""
@@ -49,4 +58,6 @@ class AuditRecord:
             generation=int(row.get("generation", 0)),
             batch_id=str(row.get("batch_id", "")),
             payload=row.get("payload"),
+            prev_hash=str(row.get("prev_hash", "")),
+            chain_hash=str(row.get("chain_hash", "")),
         )

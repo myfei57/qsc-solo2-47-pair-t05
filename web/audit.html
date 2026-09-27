@@ -28,10 +28,22 @@
     <button onclick="refresh()">查询</button>
   </div>
   <table id="records"><thead><tr><th>序号</th><th>主题</th><th>刻度</th><th>记号</th></tr></thead><tbody></tbody></table>
+  <h1 style="margin-top:24px">链锚点</h1>
+  <pre id="anchor"></pre>
+  <div>
+    <label>起始序号 <input id="from_seq" size="6"></label>
+    <label>结束序号 <input id="to_seq" size="6"></label>
+    <button onclick="exportSegment()">导出分片</button>
+    <button onclick="verifySegment()">校验分片</button>
+  </div>
+  <pre id="segment"></pre>
   <h1 style="margin-top:24px">汇总</h1>
   <pre id="summary"></pre>
   <script>
     const api = async (path) => (await fetch(path)).json();
+    const post = async (path, body) => (await fetch(path, {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body),
+    })).json();
     async function refresh() {
       const topic = document.getElementById("topic").value.trim();
       const limit = document.getElementById("limit").value.trim();
@@ -47,8 +59,24 @@
           `<td>${record.tick}</td><td>${JSON.stringify(record.payload)}</td>`;
         body.appendChild(tr);
       }
+      document.getElementById("anchor").textContent =
+        JSON.stringify(await api("/api/audit/anchor"), null, 2);
       document.getElementById("summary").textContent =
         JSON.stringify(await api("/api/audit/summary"), null, 2);
+    }
+    async function exportSegment() {
+      const query = new URLSearchParams({
+        from_seq: document.getElementById("from_seq").value.trim(),
+        to_seq: document.getElementById("to_seq").value.trim(),
+      });
+      document.getElementById("segment").textContent =
+        JSON.stringify(await api("/api/audit/export?" + query.toString()), null, 2);
+    }
+    async function verifySegment() {
+      const segment = JSON.parse(document.getElementById("segment").textContent);
+      const anchor = await api("/api/audit/anchor");
+      document.getElementById("segment").textContent = JSON.stringify(
+        await post("/api/audit/verify", {segment, anchor}), null, 2);
     }
     refresh();
   </script>

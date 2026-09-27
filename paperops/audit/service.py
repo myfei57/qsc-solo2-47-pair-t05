@@ -1,11 +1,12 @@
 """Event capture and querying."""
 
-from typing import Any
+from typing import Any, Mapping
 
 from ..clock import LogicalClock
 from ..event import Event, EventBus
 from ..verdict import RecordFilter
-from . import query, summary
+from . import query, segment, summary
+from .chain import check_rows, merkle_root
 from .log import AuditLog
 from .record import AuditRecord
 
@@ -54,6 +55,35 @@ class AuditService:
 
     def summary(self) -> dict[str, Any]:
         return summary.summarize(self._log.records())
+
+    def anchor(self) -> dict[str, Any]:
+        """The values an outside party pins down to hold the stream to account."""
+        records = self._log.records()
+        return {
+            "sequence": self._log.sequence,
+            "first_seq": records[0].seq if records else 0,
+            "tree_size": len(records),
+            "head_hash": self._log.head_hash,
+            "root_hash": merkle_root(self._log.chain_hashes()),
+        }
+
+    def verify_chain(self) -> dict[str, Any]:
+        """Re-check every link of the stream currently held."""
+        records = self._log.records()
+        first_seq = records[0].seq if records else 1
+        problems = check_rows([record.to_row() for record in records], first_seq)
+        return {"valid": not problems, "problems": problems, "records": len(records)}
+
+    def export_segment(self, from_seq: int, to_seq: int) -> dict[str, Any]:
+        """A portable run of records an outside party can verify on their own."""
+        return segment.export(self._log.records(), from_seq, to_seq)
+
+    def verify_segment(
+        self,
+        document: Mapping[str, Any],
+        anchor: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return segment.verify(document, anchor)
 
     def count(self, topic: str) -> int:
         return self._log.count(topic)

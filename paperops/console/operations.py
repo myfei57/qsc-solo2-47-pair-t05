@@ -56,6 +56,14 @@ def audit_clear(console: Any, request: Request) -> Response:
     return json_response({"cleared": console.services.audit.clear()})
 
 
+def audit_verify(console: Any, request: Request) -> Response:
+    """Check an exported segment against itself and an optional pinned anchor."""
+    body = request.body()
+    document = body.get("segment", body)
+    anchor = body.get("anchor")
+    return json_response(console.services.audit.verify_segment(document, anchor))
+
+
 def batch_release(console: Any, request: Request) -> Response:
     """Forget a recorded process batch so its identifier can be issued again."""
     batch_id = request.body()["batch_id"]

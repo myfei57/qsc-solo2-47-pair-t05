@@ -187,6 +187,20 @@ def audit_summary(console: Any, request: Request) -> Response:
     return json_response(summary)
 
 
+def audit_anchor(console: Any, request: Request) -> Response:
+    """The chain values an outside party pins down through their own channel."""
+    return json_response(console.services.audit.anchor())
+
+
+def audit_export(console: Any, request: Request) -> Response:
+    """A portable run of records with the proof needed to verify it."""
+    segment = console.services.audit.export_segment(
+        request.integer("from_seq", 0),
+        request.integer("to_seq", 0),
+    )
+    return json_response(segment)
+
+
 def press_state(console: Any, request: Request) -> Response:
     return json_response(console.services.press.view().to_dict())
 

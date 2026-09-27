@@ -75,3 +75,7 @@ class OutOfRangeError(ContractError):
 
 class UnknownSensorError(ContractError):
     """Raised when a moisture sensor is addressed before it is mapped."""
+
+
+class ChainIntegrityError(ContractError):
+    """Raised when a stored record no longer matches the chain it claims to follow."""
