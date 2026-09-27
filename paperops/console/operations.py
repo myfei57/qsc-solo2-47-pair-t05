@@ -56,6 +56,25 @@ def audit_clear(console: Any, request: Request) -> Response:
     return json_response({"cleared": console.services.audit.clear()})
 
 
+def audit_verify(console: Any, request: Request) -> Response:
+    """Verify a fragment export against the pinned audit public key."""
+    body = request.body()
+    public_key = body.get("public_key")
+    report = console.services.audit.verify_fragment(body["fragment"], public_key)
+    return json_response(
+        {
+            "valid": report.valid,
+            "records": report.records,
+            "blocks": report.blocks,
+            "anchored": report.anchored,
+            "contiguous": report.contiguous,
+            "links_ok": report.links_ok,
+            "signatures_ok": report.signatures_ok,
+            "errors": list(report.errors),
+        }
+    )
+
+
 def batch_release(console: Any, request: Request) -> Response:
     """Forget a recorded process batch so its identifier can be issued again."""
     batch_id = request.body()["batch_id"]

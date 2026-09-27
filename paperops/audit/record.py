@@ -17,6 +17,8 @@ class AuditRecord:
     generation: int
     batch_id: str
     payload: Any
+    prev_hash: str = ""
+    hash: str = ""
 
     def to_row(self) -> dict[str, Any]:
         return {
@@ -27,6 +29,8 @@ class AuditRecord:
             "generation": self.generation,
             "batch_id": self.batch_id,
             "payload": self.payload,
+            "prev_hash": self.prev_hash,
+            "hash": self.hash,
         }
 
     def as_filter_row(self) -> dict[str, Any]:
@@ -49,4 +53,6 @@ class AuditRecord:
             generation=int(row.get("generation", 0)),
             batch_id=str(row.get("batch_id", "")),
             payload=row.get("payload"),
+            prev_hash=str(row.get("prev_hash", "")),
+            hash=str(row.get("hash", "")),
         )

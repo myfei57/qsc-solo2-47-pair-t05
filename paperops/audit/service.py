@@ -1,11 +1,13 @@
 """Event capture and querying."""
 
-from typing import Any
+from typing import Any, Mapping
 
 from ..clock import LogicalClock
 from ..event import Event, EventBus
 from ..verdict import RecordFilter
 from . import query, summary
+from .block import BlockSealer
+from .fragment import FragmentReport, export_fragment, verify_fragment
 from .log import AuditLog
 from .record import AuditRecord
 
@@ -64,6 +66,50 @@ class AuditService:
     @property
     def sequence(self) -> int:
         return self._log.sequence
+
+    # ---------------------------------------------------- tamper-evident chain
+
+    @property
+    def sealer(self) -> BlockSealer | None:
+        return self._log.sealer
+
+    def sealing(self) -> dict[str, Any]:
+        """Current state of the sealing layer."""
+        sealer = self._log.sealer
+        if sealer is None:
+            return {"enabled": False, "chain_ok": self.verify_chain()}
+        sealer.seal_new_blocks(self._log.record_hashes())
+        return {
+            "enabled": True,
+            "chain_ok": self.verify_chain(),
+            "block_size": sealer.block_size,
+            "sealed_blocks": sealer.sealed_count,
+            "sealed_records": sealer.last_sealed_seq(),
+            "total_records": len(self._log.records()),
+            "public_key": sealer.public_key,
+        }
+
+    def verify_chain(self) -> bool:
+        """Recompute the whole record hash chain from disk-loaded records."""
+        return self._log.verify_chain()
+
+    def export_fragment(self, first_seq: int, last_seq: int) -> dict[str, Any]:
+        """Produce a self-verifying export covering a sequence range."""
+        sealer = self._log.sealer
+        if sealer is None:
+            raise RuntimeError("audit log has no block sealer configured")
+        return export_fragment(self._log.records(), sealer, first_seq, last_seq)
+
+    def verify_fragment(
+        self,
+        document: Mapping[str, Any],
+        trusted_public_key: str | None = None,
+    ) -> FragmentReport:
+        """Verify an export, pinning this ledger's signing key by default."""
+        sealer = self._log.sealer
+        if trusted_public_key is None and sealer is not None:
+            trusted_public_key = sealer.public_key
+        return verify_fragment(document, trusted_public_key)
 
     def _capture(self, event: Event) -> None:
         self._log.append(event.topic, event.payload, self._clock.tick)

@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from .audit import AuditLog, AuditService
+from .audit import AuditLog, AuditService, BlockSealer
 from .broke import BrokeService
 from .cal import CalService
 from .clock import IdSequence, LogicalClock
@@ -76,7 +76,9 @@ def build_services(config: Config) -> Services:
     reel = ReelService(journal, bus, clock)
     broke = BrokeService(journal, bus, clock, batches)
     water = WaterService(journal, bus, clock, generations, confirmations)
-    audit = AuditService(AuditLog(config.data_dir), bus, clock)
+    audit = AuditService(
+        AuditLog(config.data_dir, BlockSealer(config.data_dir)), bus, clock
+    )
     state = StateService(
         journal,
         bus,

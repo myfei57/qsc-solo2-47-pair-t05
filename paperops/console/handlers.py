@@ -187,6 +187,19 @@ def audit_summary(console: Any, request: Request) -> Response:
     return json_response(summary)
 
 
+def audit_sealing(console: Any, request: Request) -> Response:
+    return json_response(console.services.audit.sealing())
+
+
+def audit_export(console: Any, request: Request) -> Response:
+    first = request.integer("first", 0)
+    last = request.integer("last", 0)
+    if last <= 0:
+        last = console.services.audit.sequence
+    document = console.services.audit.export_fragment(first if first > 0 else 1, last)
+    return json_response(document)
+
+
 def press_state(console: Any, request: Request) -> Response:
     return json_response(console.services.press.view().to_dict())
 
